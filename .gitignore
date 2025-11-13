@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtualenvs
+.venv/
+.venv_streamlit/
+.venv_*/
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Byte-compiled
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data / models - ignore large binary artifacts
+model/*.pkl
+model/*.npy
+model/*.joblib
+model/*.pickle
+model/*.h5
+model/*.pth
+model/*.ckpt
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+
+# Ignore local runtime configs
+.env
+
