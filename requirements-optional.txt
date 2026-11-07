@@ -1,0 +1,13 @@
+# Optional classifiers for compare_models.py
+xgboost
+lightgbm
+catboost
+
+# Optional hyperparameter tuning for tune_model.py
+optuna
+
+# Optional PDF assessment download for the Streamlit app
+reportlab
+
+# Optional model tracking for compare_models.py --mlflow
+mlflow

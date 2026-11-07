@@ -18,20 +18,20 @@ Keywords: prediabetes, RandomForest, fuzzy inference, conformal prediction, SHAP
 - Inductive conformal prediction provides p-values and prediction sets, enabling well-calibrated uncertainty quantification.
 - SHAP explanations allow feature-level interpretation, and a Streamlit demo provides an interactive front-end for inspection.
 
-The high-level project files and their purposes are summarized in `COPILOT_CONTEXT.md` (also included in this repo). Key scripts:
+The current project layout and quick-start guide are summarized in `README.md`. Reusable code lives in `diabetes_risk/`; command-line workflows live in `scripts/`.
 
-- `train_model.py` — quick training of an RF model (3-class labels).
-- `train_calibrated.py` — trains a raw RF, a calibrated classifier (CalibratedClassifierCV), computes inductive conformal calibration scores, and writes model artifacts to `model/`.
-- `predict.py` — loads saved models and runs a single-row prediction producing class probabilities, fuzzy score, and fused risk.
-- `conformal_predict.py` — helper for computing p-values and prediction sets from saved calibration scores.
-- `evaluate_cv.py` / `generate_results.py` — evaluation and figure generation pipelines; write summary metrics to `Paper/`.
-- `utils.py` — fuzzy membership functions and `fuzzy_risk_score` implementation.
+- `scripts/train_model.py` — quick training of an RF model (3-class labels).
+- `scripts/train_calibrated.py` — trains calibrated models, computes conformal calibration scores, and writes artifacts to `model/`.
+- `diabetes_risk/predict.py` — loads saved models and runs a single-row prediction.
+- `diabetes_risk/conformal_predict.py` — computes p-values and prediction sets from saved calibration scores.
+- `scripts/evaluate_cv.py` / `scripts/generate_results.py` — evaluation and figure generation workflows.
+- `diabetes_risk/utils.py` — fuzzy membership functions and risk scoring implementation.
 - `app/streamlit_app.py` — demo UI.
 
 ## Data and labels
 
 - Expected input: a tabular CSV dataset containing a `Glucose` column and other numeric features common to Pima-style diabetes datasets: `Pregnancies`, `Glucose`, `BloodPressure`, `SkinThickness`, `Insulin`, `BMI`, `DiabetesPedigreeFunction`, `Age`.
-- Label creation: `make_labels_from_glucose` (seen in `train_calibrated.py`) maps glucose to {0=normal, 1=prediabetic, 2=diabetic} using thresholds as described above. The train script drops `Outcome` if present and uses numeric features only.
+- Label creation: `make_labels_from_glucose` in `diabetes_risk/ml_pipeline.py` maps glucose to {0=normal, 1=prediabetic, 2=diabetic} using thresholds as described above. The training workflow selects numeric features and excludes the target-defining column.
 
 ## Methods (concise)
 
@@ -50,11 +50,11 @@ The high-level project files and their purposes are summarized in `COPILOT_CONTE
    - Calibration nonconformity scores are saved to `model/conformal_calib.npy` for later p-value computation.
 
 5. Fuzzy risk score
-   - Implemented in `utils.py` using triangular and trapezoid membership functions over `Glucose`, `BMI`, and `Age`.
+   - Implemented in `diabetes_risk/utils.py` using triangular and trapezoid membership functions. Glucose is omitted from the fuzzy branch when it defines the target.
    - The `fuzzy_risk_score` returns a normalized value in [0,1] with glucose weighted most heavily.
 
 6. Fusion
-   - Fused risk = weighted combination of model probability-derived risk and the fuzzy score (the repo contains the fusion logic in `predict.py` and related scripts).
+   - Fused risk = weighted combination of model probability-derived risk and the fuzzy score (the fusion logic is in `diabetes_risk/predict.py`).
 
 7. Explainability
    - SHAP (TreeExplainer) is used to compute feature importances and per-example explanations. The Streamlit demo attempts to render a SHAP bar plot when running locally.
@@ -62,7 +62,7 @@ The high-level project files and their purposes are summarized in `COPILOT_CONTE
 ## Implementation details and artifacts
 
 - Requirements: see `requirements.txt` (pandas, numpy, scikit-learn, joblib, streamlit, shap, matplotlib, seaborn, pytest).
-- Main artifacts produced by `train_calibrated.py` and saved under `model/`:
+- Main artifacts produced by `scripts/train_calibrated.py` and saved under `model/`:
   - `model_rf_raw.pkl` — raw RandomForest (pickled with joblib)
   - `model_calibrated.pkl` — CalibratedClassifierCV object
   - `conformal_calib.npy` — array of nonconformity scores for conformal calibration
@@ -70,11 +70,10 @@ The high-level project files and their purposes are summarized in `COPILOT_CONTE
 
 Paths in this repository (important files):
 
-- `COPILOT_CONTEXT.md` — project context (design points, how to run, next items).
 - `README.md` — quick start and project highlights.
-- `train_calibrated.py` — training, calibration, and conformal score generation.
-- `utils.py` — fuzzy helpers: `triangular`, `trapezoid`, `fuzzy_risk_score`.
-- `app/streamlit_app.py` — interactive demo (uses `predict.py` and `load_model`/`explain_shap` helpers)
+- `scripts/train_calibrated.py` — training, calibration, and conformal score generation.
+- `diabetes_risk/utils.py` — fuzzy helpers: `triangular`, `trapezoid`, and fuzzy risk scoring.
+- `app/streamlit_app.py` — interactive demo (uses package prediction helpers).
 - `Paper/results_summary.md` — existing result tables and calibration figures references.
 
 ## Results (repo-provided summary)
@@ -92,7 +91,7 @@ Notes:
 
 ## How to reproduce (short)
 
-The repository includes PowerShell-friendly quick steps in `COPILOT_CONTEXT.md`. A minimal reproduction sequence (PowerShell) is:
+The repository includes PowerShell-friendly quick steps in `README.md`. A minimal reproduction sequence (PowerShell) is:
 
 ```powershell
 cd C:\Users\shreyash\PredDiabet\PredDiabetes_Project
@@ -101,18 +100,18 @@ python -m venv .venv
 pip install -r requirements.txt
 
 # Train calibrated model and produce conformal calibration
-python train_calibrated.py --data "..\Fuzzy_Diabetes\Model\diabetes.csv" --out model
+python -m scripts.train_calibrated --data "..\Fuzzy_Diabetes\Model\diabetes.csv" --out model
 
 # Evaluate or generate results & figures
-python evaluate_cv.py
-python generate_results.py
+python -m scripts.evaluate_cv --data "..\Fuzzy_Diabetes\Model\diabetes.csv"
+python -m scripts.generate_results --data "..\Fuzzy_Diabetes\Model\diabetes.csv"
 
 # Run demo
 streamlit run app/streamlit_app.py
 ```
 
 Important reproducibility notes:
-- Random seed(s): training uses `random_state=42` for reproducibility in `train_calibrated.py`.
+- Random seed(s): training uses `random_state=42` for reproducibility in `scripts/train_calibrated.py`.
 - Splitting strategy: two-layer `train_test_split` is used to allocate train/calibration/test sets (60/20/20).
 - Make sure the dataset used for training has the `Glucose` column; label creation depends on this.
 
@@ -148,9 +147,9 @@ Creator: Shreyash Anand <anandshreyash747@gmail.com>
 
 ## Appendix: code pointers and artifact locations
 
-- Training and calibration: `train_calibrated.py` (saves to `model/`)
-- Fuzzy functions: `utils.py` — `triangular`, `trapezoid`, `fuzzy_risk_score`
-- Demo: `app/streamlit_app.py` (uses `predict.py` and `load_model`/`explain_shap` helpers)
+- Training and calibration: `scripts/train_calibrated.py` (saves to `model/`)
+- Fuzzy functions: `diabetes_risk/utils.py` — `triangular`, `trapezoid`, and fuzzy risk scoring
+- Demo: `app/streamlit_app.py` (uses `diabetes_risk.predict` helpers)
 - Results summary: `Paper/results_summary.md` and `Paper/figures`
 - Requirements: `requirements.txt`
 
@@ -161,4 +160,4 @@ If you want, I can:
 
 ---
 
-Generated automatically from repository files: `COPILOT_CONTEXT.md`, `README.md`, `Paper/Draft_Methods.md`, `Paper/results_summary.md`, `train_calibrated.py`, `utils.py`, and `app/streamlit_app.py`.
+Generated from repository materials including `README.md`, `Paper/Draft_Methods.md`, `Paper/results_summary.md`, `scripts/train_calibrated.py`, `diabetes_risk/utils.py`, and `app/streamlit_app.py`.

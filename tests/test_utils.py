@@ -1,5 +1,4 @@
-import math
-from utils import triangular, trapezoid, fuzzy_risk_score
+from diabetes_risk.utils import triangular, trapezoid, fuzzy_risk_score
 
 
 def test_triangular_center():
